@@ -1,0 +1,37 @@
+name: Terraform Deploy
+
+on:
+  push:
+    branches:
+      - main  # Triggers deployment when code is pushed to 'main'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        environment: [qa1, qa2]  # Runs job for both QA environments
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1  # Change this to your AWS region
+
+      - name: Initialize Terraform
+        run: terraform init
+
+      - name: Select Terraform Workspace
+        run: terraform workspace select ${{ matrix.environment }} || terraform workspace new ${{ matrix.environment }}
+
+      - name: Apply Terraform Changes
+        run: terraform apply -var-file="${{ matrix.environment }}.tfvars" -auto-approve
